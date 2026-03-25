@@ -463,7 +463,7 @@ document.getElementById('searchInput').addEventListener('keydown', e => { if (e.
     label.textContent = 'En cours…';
 
     try {
-      const res  = await tfFetch('/taskflow/api/tasks.php', {
+      const res  = await tfFetch(tfUrl('/api/tasks.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
         body: JSON.stringify({

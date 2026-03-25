@@ -8,6 +8,14 @@ $flash     = getFlash();
 $pageTitle = $pageTitle ?? APP_NAME;
 $initials  = strtoupper(substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1));
 $path      = $_SERVER['PHP_SELF'] ?? '';
+// Préfixe URL pour les appels fetch (vide si APP_URL est à la racine du domaine, ex. https://task.example.org)
+$tfBasePath = '';
+if (defined('APP_URL')) {
+    $parts = parse_url(APP_URL);
+    if (!empty($parts['path']) && $parts['path'] !== '/') {
+        $tfBasePath = rtrim($parts['path'], '/');
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -25,6 +33,7 @@ $path      = $_SERVER['PHP_SELF'] ?? '';
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+<script>window.TF_BASE=<?= json_encode($tfBasePath, JSON_UNESCAPED_UNICODE) ?>;</script>
 <script src="<?= APP_URL ?>/assets/js/app.js"></script>
 </head>
 <body>

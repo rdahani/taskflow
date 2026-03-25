@@ -4,6 +4,14 @@
 
 'use strict';
 
+/** Préfixe chemin app (ex. '' ou '/taskflow'), défini dans includes/header.php */
+function tfUrl(path) {
+  const base = typeof window.TF_BASE === 'string' ? window.TF_BASE : '';
+  const p = path.startsWith('/') ? path : '/' + path;
+  return base + p;
+}
+window.tfUrl = tfUrl;
+
 /* ============================================================
    DARK MODE
    ============================================================ */
@@ -207,7 +215,7 @@ async function loadNotifs() {
   const list = document.getElementById('notifList');
   if (!list) return;
   try {
-    const res = await tfFetch('/taskflow/api/notifications.php?action=list');
+    const res = await tfFetch(tfUrl('/api/notifications.php?action=list'));
     const data = await res.json();
     if (!data.items?.length) {
       list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px"><i class="fa-regular fa-bell-slash" style="font-size:20px;opacity:0.4;display:block;margin-bottom:8px"></i>Aucune notification</div>';
@@ -226,20 +234,20 @@ async function loadNotifs() {
 }
 
 async function readNotif(id, lien) {
-  await tfFetch(`/taskflow/api/notifications.php?action=read&id=${id}`, { method: 'POST' });
+  await tfFetch(tfUrl(`/api/notifications.php?action=read&id=${id}`), { method: 'POST' });
   updateNotifBadge();
   if (lien) window.location = lien;
 }
 
 async function markAllRead() {
-  await tfFetch('/taskflow/api/notifications.php?action=read_all', { method: 'POST' });
+  await tfFetch(tfUrl('/api/notifications.php?action=read_all'), { method: 'POST' });
   document.getElementById('notifPanel')?.classList.remove('open');
   document.querySelector('.notif-badge')?.remove();
 }
 
 async function updateNotifBadge() {
   try {
-    const res = await tfFetch('/taskflow/api/notifications.php?action=count');
+    const res = await tfFetch(tfUrl('/api/notifications.php?action=count'));
     const data = await res.json();
     const badge = document.querySelector('.notif-badge');
     if (data.count > 0) {
@@ -292,13 +300,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function _doSearch(q, resultsEl) {
   try {
-    const res = await tfFetch(`/taskflow/api/tasks.php?action=search&q=${encodeURIComponent(q)}`);
+    const res = await tfFetch(tfUrl(`/api/tasks.php?action=search&q=${encodeURIComponent(q)}`));
     const data = await res.json();
     if (!data.results?.length) {
       resultsEl.innerHTML = '<div class="search-result-item" style="color:var(--text3);justify-content:center">Aucun résultat</div>';
     } else {
       resultsEl.innerHTML = data.results.map(t => `
-        <div class="search-result-item" onclick="window.location='/taskflow/pages/tasks/view.php?id=${t.id}'">
+        <div class="search-result-item" onclick="window.location='${tfUrl('/pages/tasks/view.php?id=' + t.id)}'">
           <i class="fa-solid fa-list-check" style="color:var(--primary);flex-shrink:0;font-size:12px"></i>
           <strong style="font-size:13px">${escHtml(t.titre)}</strong>
           <span class="badge" style="margin-left:auto;background:${t.statut_bg||'var(--border)'};color:${t.statut_color||'var(--text)'};">${escHtml(t.statut_label||'')}</span>
@@ -332,7 +340,7 @@ function initKanban() {
 async function updateTaskStatus(taskId, status) {
   const csrf = document.querySelector('meta[name=csrf]')?.content || '';
   try {
-    const res = await tfFetch('/taskflow/api/tasks.php', {
+    const res = await tfFetch(tfUrl('/api/tasks.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({ action: 'update_status', id: taskId, statut: status })
@@ -498,7 +506,7 @@ async function deleteTask(taskId, msg = 'Supprimer définitivement cette tâche 
   if (!ok) return;
   const csrf = document.querySelector('meta[name=csrf]')?.content || '';
   try {
-    const res = await tfFetch('/taskflow/api/tasks.php', {
+    const res = await tfFetch(tfUrl('/api/tasks.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({ action: 'delete', id: Number(taskId) })
@@ -506,7 +514,7 @@ async function deleteTask(taskId, msg = 'Supprimer définitivement cette tâche 
     const data = await res.json();
     if (data.success) {
       Toast.success('Tâche supprimée');
-      window.location.href = '/taskflow/pages/tasks/list.php';
+      window.location.href = tfUrl('/pages/tasks/list.php');
     } else {
       Toast.error('Erreur', data.error || 'Suppression impossible');
     }
@@ -567,7 +575,7 @@ function initTaskChat() {
     if (now - lastTypingPost < 2000) return;
     lastTypingPost = now;
     const csrf = document.querySelector('meta[name=csrf]')?.content || '';
-    fetch('/taskflow/api/task_chat.php', {
+    fetch(tfUrl('/api/task_chat.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({ action: 'typing', task_id: taskId }),
@@ -578,7 +586,7 @@ function initTaskChat() {
     const visible = document.visibilityState === 'visible';
     const longPoll = visible;
     const timeout = visible ? 34 : 12;
-    const url = `/taskflow/api/task_chat.php?task_id=${taskId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`;
+    const url = tfUrl(`/api/task_chat.php?task_id=${taskId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`);
     pollAbort = new AbortController();
     const res = await fetch(url, { signal: pollAbort.signal });
     return res.json();
@@ -650,7 +658,7 @@ function initTaskChat() {
     inp.value = '';
     if (inp.tagName === 'TEXTAREA') autoResizeTextarea(inp);
     try {
-      const res = await tfFetch('/taskflow/api/task_chat.php', {
+      const res = await tfFetch(tfUrl('/api/task_chat.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
         body: JSON.stringify({ action: 'send', task_id: taskId, message: text }),
@@ -703,7 +711,7 @@ async function dmMarkReadRequest(threadId, lastMsgId) {
   if (!threadId || !lastMsgId) return;
   const csrf = document.querySelector('meta[name=csrf]')?.content || '';
   try {
-    await fetch('/taskflow/api/dm_chat.php', {
+    await fetch(tfUrl('/api/dm_chat.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({
@@ -783,7 +791,7 @@ function initDmChat() {
     if (now - lastTypingPost < 2000) return;
     lastTypingPost = now;
     const csrf = document.querySelector('meta[name=csrf]')?.content || '';
-    fetch('/taskflow/api/dm_chat.php', {
+    fetch(tfUrl('/api/dm_chat.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({ action: 'typing', thread_id: threadId }),
@@ -794,7 +802,7 @@ function initDmChat() {
     const visible = document.visibilityState === 'visible';
     const longPoll = visible;
     const timeout = visible ? 34 : 12;
-    const url = `/taskflow/api/dm_chat.php?action=messages&thread_id=${threadId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`;
+    const url = tfUrl(`/api/dm_chat.php?action=messages&thread_id=${threadId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`);
     pollAbort = new AbortController();
     const res = await fetch(url, { signal: pollAbort.signal });
     return res.json();
@@ -864,7 +872,7 @@ function initDmChat() {
     inp.value = '';
     autoResizeTextarea(inp);
     try {
-      const res = await tfFetch('/taskflow/api/dm_chat.php', {
+      const res = await tfFetch(tfUrl('/api/dm_chat.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
         body: JSON.stringify({

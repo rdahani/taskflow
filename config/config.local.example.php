@@ -14,10 +14,12 @@ return [
     'APP_ENV'   => 'production',
     'APP_DEBUG' => false,
 
-    // URL publique exacte de l'application (HTTPS recommandé)
-    'APP_URL'   => 'https://votre-domaine.tld/chemin/taskflow',
+    // URL publique exacte de l'application (HTTPS recommandé), sans slash final.
+    // Ex. racine : https://task.example.org  | sous-dossier : https://example.org/taskflow
+    'APP_URL'   => 'https://votre-domaine.tld',
 
-    'DB_HOST'   => 'localhost',
+    // Chez certains hébergeurs (ex. LWS), utiliser 127.0.0.1 plutôt que localhost pour MySQL
+    'DB_HOST'   => '127.0.0.1',
     'DB_NAME'   => 'taskflow',
     'DB_USER'   => 'taskflow_user',
     'DB_PASS'   => 'changez_moi',
