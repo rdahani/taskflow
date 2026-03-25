@@ -7,10 +7,7 @@
 # Optionnel :
 #   FTP_SERVER_DIR — répertoire distant avec slash final (ex. www/ ; défaut ./)
 #
-# FTPS LWS : si la connexion échoue, éditez l’étape « Déployer par FTP » et ajoutez :
-#   protocol: ftps
-#   port: 21
-# (voir doc LWS pour le port exact)
+# Connexion en FTPS explicite (port 21). En cas d’échec, voir DEPLOY.md (FTP/FTPS).
 
 name: Deploy LWS
 
@@ -61,6 +58,10 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          # LWS exige souvent FTPS explicite (AUTH TLS) sur le port 21
+          protocol: ftps
+          port: 21
+          security: loose
           local-dir: ./
           server-dir: ${{ steps.ftpdir.outputs.server_dir }}
           timeout: 600000
