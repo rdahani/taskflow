@@ -1,0 +1,16 @@
+{
+  "name": "taskflow/app",
+  "description": "TaskFlow — tests unitaires (PHPUnit)",
+  "license": "proprietary",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TaskFlow\\Tests\\": "tests/"
+    }
+  }
+}

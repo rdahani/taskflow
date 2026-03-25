@@ -1,0 +1,30 @@
+# Secrets & environnement local
+config/config.local.php
+.env
+.env.*
+
+# Fichiers utilisateurs (garder le dossier)
+uploads/*
+!uploads/.gitkeep
+
+# Composer
+/vendor/
+
+# IDE / outils / Cursor
+.claude/
+.cursor/
+
+# OS
+.DS_Store
+
+# Environnement local (copies)
+*.local.php
+!config/config.local.example.php
+
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+
+# Logs
+*.log
