@@ -17,7 +17,7 @@ alwaysApply: false
 | `FTP_USERNAME` | Identifiant FTP LWS |
 | `FTP_PASSWORD` | Mot de passe FTP |
 | `CONFIG_LOCAL_PHP` | Contenu **complet** du fichier `config/config.local.php` de production |
-| `FTP_SERVER_DIR` | Optionnel : chemin distant avec slash final (`www/`). Si absent, le workflow utilise `./` (racine après connexion FTP). |
+| `FTP_SERVER_DIR` | **Souvent requis** pour un sous-domaine : dossier racine web indiqué par LWS (ex. `www/task.coopiconge.org/`), pas `./`. |
 
 - Pour pousser des fichiers sous `.github/workflows/`, le jeton GitHub CLI doit inclure la portée **`workflow`** (`gh auth refresh -h github.com -s workflow`).
 - Si la connexion FTP échoue, l’hébergeur peut exiger **FTPS** : ajouter `protocol: ftps` et le `port` indiqué par LWS dans l’étape « Déployer par FTP » du workflow.

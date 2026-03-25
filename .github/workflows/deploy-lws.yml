@@ -5,7 +5,9 @@
 #   CONFIG_LOCAL_PHP — contenu complet de config/config.local.php (production)
 #
 # Optionnel :
-#   FTP_SERVER_DIR — répertoire distant avec slash final (ex. www/ ; défaut ./)
+#   FTP_SERVER_DIR — dossier racine **web** du site (slash final), pas la racine FTP du compte.
+#   Sous-domaine ex. task.coopiconge.org : souvent www/task.coopiconge.org/ ou htdocs/task.coopiconge.org/
+#   (voir LWS Panel → sous-domaine → répertoire racine). Sans ce secret, les fichiers partent dans ./ (mauvaise cible).
 #
 # Connexion en FTPS explicite (port 21). En cas d’échec, voir DEPLOY.md (FTP/FTPS).
 
