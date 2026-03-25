@@ -1,0 +1,24 @@
+---
+description: Déploiement TaskFlow (GitHub Actions → LWS, FTP)
+globs: .github/workflows/deploy-lws.yml
+alwaysApply: false
+---
+
+# Déploiement LWS / GitHub Actions
+
+- Le workflow **Deploy LWS** (`.github/workflows/deploy-lws.yml`) pousse le code sur l’hébergement **FTP** à chaque push sur `main`.
+- Les identifiants FTP et le contenu de `config/config.local.php` **ne doivent jamais** être committés : uniquement des **Secrets** du dépôt GitHub (`Settings → Secrets and variables → Actions`).
+
+## Secrets attendus
+
+| Secret | Rôle |
+|--------|------|
+| `FTP_SERVER` | Hôte FTP (ex. `ftp.coopiconge.org`) |
+| `FTP_USERNAME` | Identifiant FTP LWS |
+| `FTP_PASSWORD` | Mot de passe FTP |
+| `CONFIG_LOCAL_PHP` | Contenu **complet** du fichier `config/config.local.php` de production |
+| `FTP_SERVER_DIR` | Optionnel : chemin distant avec slash final (`www/`). Si absent, le workflow utilise `./` (racine après connexion FTP). |
+
+- Pour pousser des fichiers sous `.github/workflows/`, le jeton GitHub CLI doit inclure la portée **`workflow`** (`gh auth refresh -h github.com -s workflow`).
+- Si la connexion FTP échoue, l’hébergeur peut exiger **FTPS** : ajouter `protocol: ftps` et le `port` indiqué par LWS dans l’étape « Déployer par FTP » du workflow.
+- Le dossier **`uploads/`** est exclu de la synchro FTP pour ne pas écraser les fichiers utilisateurs sur le serveur.
