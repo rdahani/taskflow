@@ -208,7 +208,16 @@ Le dépôt inclut `.github/workflows/deploy-lws.yml` : à chaque **push sur `mai
 
 La synchronisation **exclut** le dossier `uploads/` pour ne pas écraser les fichiers déjà déposés par les utilisateurs sur le serveur. Vérifiez une première fois que le dossier `uploads/` existe côté LWS et est inscriptible par PHP.
 
-Si la connexion FTP échoue (hébergeur en **FTPS**), ouvrez `deploy-lws.yml` et ajoutez dans l’étape « Déployer par FTP » les clés `protocol: ftps` et le `port` indiqué par LWS (voir commentaire en tête du fichier workflow).
+Le workflow utilise par défaut **FTPS explicite** sur le port `21` (souvent requis par LWS). Si votre offre n’utilise que le FTP « clair », remplacez dans `deploy-lws.yml` : retirez `protocol: ftps`, `port` et `security: loose`, ou mettez `protocol: ftp`.
+
+#### GitHub Actions : `FTPError: 530 Login authentication failed`
+
+Le serveur refuse l’identifiant ou le mot de passe FTP (ce n’est pas une erreur PHP / TaskFlow).
+
+1. Dans **l’espace client LWS**, ouvrez **Compte FTP** : vérifiez le **nom d’utilisateur exact** (parfois différent du préfixe de la base MySQL) et **réinitialisez le mot de passe FTP** si besoin.
+2. Testez la même combinaison avec **FileZilla** (ou équivalent) depuis votre PC : si la connexion échoue aussi, le mot de passe ou l’identifiant est incorrect côté LWS.
+3. Si FileZilla fonctionne mais pas GitHub Actions, vérifiez une éventuelle **restriction d’accès FTP par IP** dans le panel : les runners GitHub ont des IP publiques variables ; il faudrait autoriser tout le monde pour le FTP ou utiliser un autre mode de déploiement (ZIP manuel, autre hébergeur avec SSH, etc.).
+4. Mettez à jour les secrets **`FTP_USERNAME`** et **`FTP_PASSWORD`** sur GitHub, sans espace ni retour à la ligne en trop (rééditer le secret après copier-coller).
 
 **Base de données** : le workflow ne lance pas les migrations MySQL ; importez `config/database.sql` et les migrations `001` → `004` une fois via phpMyAdmin (ou équivalent), comme décrit plus haut.
 
