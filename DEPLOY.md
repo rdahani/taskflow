@@ -193,6 +193,7 @@ Le dépôt inclut `.github/workflows/deploy-lws.yml` : à chaque **push sur `mai
 **Ce qu’il faut savoir**
 
 - Personne ne peut « se connecter à votre GitHub » à votre place sans **une authentification sur votre PC** (recommandé : **GitHub CLI** `gh auth login`, une fois). Ensuite vous pouvez lancer le script `scripts/setup-github-repo.ps1` pour créer le dépôt public et pousser `main`.
+- Si le `git push` est **refusé** pour un fichier sous `.github/workflows/`, exécutez **`gh auth refresh -h github.com -s workflow`** puis validez dans le navigateur ; le jeton doit inclure la permission **workflow** pour publier les Actions.
 - Les identifiants LWS ne doivent **pas** être dans le code : ils sont stockés dans les **secrets** du dépôt GitHub.
 
 **Secrets à créer** (dépôt → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**) :
