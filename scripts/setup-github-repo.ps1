@@ -25,6 +25,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Les fichiers .github/workflows/ exigent la permission « workflow » sur le jeton GitHub.
+Write-Host "Si le push échoue avec « refusing to allow an OAuth App » sur un fichier workflow :"
+Write-Host "  gh auth refresh -h github.com -s workflow"
+Write-Host "(validation dans le navigateur), puis : git push -u origin main"
+Write-Host ""
+
 gh repo create "$Owner/$Repo" --public --source . --remote origin --push
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Si le dépôt existe déjà :"
