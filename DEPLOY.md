@@ -210,8 +210,8 @@ Le dépôt inclut `.github/workflows/deploy-lws.yml` : à chaque **push sur `mai
 
 Le domaine principal et chaque sous-domaine ont en général un **dossier dédié** sur l’hébergement (LWS Panel → domaines / sous-domaines : colonne **répertoire** ou **racine**).
 
-1. Notez ce chemin (ex. `www/task.coopiconge.org`, `htdocs/task.coopiconge.org`, ou `www/task` selon ce que LWS affiche).
-2. Créez ou mettez à jour le secret GitHub **`FTP_SERVER_DIR`** avec ce chemin et un **slash final** : `www/task.coopiconge.org/`.
+1. Notez ce chemin tel qu’il apparaît dans le panel et dans le FTP (ex. `task.coopiconge.org/`, `www/task.coopiconge.org/`, `htdocs/...` — LWS varie).
+2. Créez ou mettez à jour le secret GitHub **`FTP_SERVER_DIR`** avec ce chemin et un **slash final** (ex. `task.coopiconge.org/`).
 3. Gardez dans **`CONFIG_LOCAL_PHP`** (secret GitHub) : `'APP_URL' => 'https://task.coopiconge.org'` **sans** sous-chemin (`…/taskflow`), si l’app est servie à la racine du sous-domaine.
 4. Si une précédente synchro a envoyé les fichiers **à la racine FTP** par erreur : déplacez-les dans le dossier du sous-domaine (gestionnaire de fichiers ou FileZilla), ou supprimez-les à la racine puis **relancez Deploy LWS** après avoir renseigné `FTP_SERVER_DIR`.
 
