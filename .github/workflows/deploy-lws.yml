@@ -1,0 +1,72 @@
+# Déploiement automatique vers LWS (FTP/FTPS) à chaque push sur main.
+#
+# Secrets requis (Settings → Secrets and variables → Actions) :
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+#   CONFIG_LOCAL_PHP — contenu complet de config/config.local.php (production)
+#
+# Optionnel :
+#   FTP_SERVER_DIR — répertoire distant avec slash final (ex. www/ ; défaut ./)
+#
+# FTPS LWS : si la connexion échoue, éditez l’étape « Déployer par FTP » et ajoutez :
+#   protocol: ftps
+#   port: 21
+# (voir doc LWS pour le port exact)
+
+name: Deploy LWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-lws-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Préparer le répertoire FTP distant
+        id: ftpdir
+        env:
+          RAW: ${{ secrets.FTP_SERVER_DIR }}
+        run: |
+          D="${RAW:-./}"
+          case "$D" in */) ;; *) D="${D}/" ;; esac
+          echo "server_dir=$D" >> "$GITHUB_OUTPUT"
+
+      - name: Écrire config/config.local.php (secret)
+        env:
+          BODY: ${{ secrets.CONFIG_LOCAL_PHP }}
+        run: |
+          if [ -z "$BODY" ]; then
+            echo "::error::Secret CONFIG_LOCAL_PHP manquant. Créez-le dans GitHub (contenu du fichier config.local.php de production)."
+            exit 1
+          fi
+          python3 << 'PY'
+          import os, pathlib
+          p = pathlib.Path("config/config.local.php")
+          p.write_text(os.environ["BODY"], encoding="utf-8")
+          PY
+
+      - name: Déployer par FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: ${{ steps.ftpdir.outputs.server_dir }}
+          timeout: 600000
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            **/uploads/**

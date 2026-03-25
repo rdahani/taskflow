@@ -186,6 +186,31 @@ git push -u origin main
 
 4. **Sur le serveur LWS**, vous pouvez ensuite déployer par **FTP**, ou en **clone Git** si LWS / un VPS vous fournit SSH + git (selon l’offre).
 
+### Déploiement automatique **GitHub Actions → LWS** (FTP)
+
+Le dépôt inclut `.github/workflows/deploy-lws.yml` : à chaque **push sur `main`** (ou lancement manuel dans l’onglet **Actions**), les fichiers sont synchronisés vers votre hébergement LWS par FTP.
+
+**Ce qu’il faut savoir**
+
+- Personne ne peut « se connecter à votre GitHub » à votre place sans **une authentification sur votre PC** (recommandé : **GitHub CLI** `gh auth login`, une fois). Ensuite vous pouvez lancer le script `scripts/setup-github-repo.ps1` pour créer le dépôt public et pousser `main`.
+- Les identifiants LWS ne doivent **pas** être dans le code : ils sont stockés dans les **secrets** du dépôt GitHub.
+
+**Secrets à créer** (dépôt → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**) :
+
+| Nom | Rôle |
+|-----|------|
+| `FTP_SERVER` | Hôte FTP indiqué par LWS (ex. `ftp.clusterXXX.hosting.ovh.net` ou équivalent) |
+| `FTP_USERNAME` | Identifiant FTP |
+| `FTP_PASSWORD` | Mot de passe FTP |
+| `CONFIG_LOCAL_PHP` | Texte **complet** du fichier `config/config.local.php` de production (copier-coller **une fois** depuis un éditeur ; même contenu que sur le serveur, avec `APP_URL`, `DB_*`, etc.) |
+| `FTP_SERVER_DIR` *(optionnel)* | Dossier distant avec slash final, ex. `www/` ou `public_html/` ; si vide, la racine après connexion FTP est utilisée (`./`) |
+
+La synchronisation **exclut** le dossier `uploads/` pour ne pas écraser les fichiers déjà déposés par les utilisateurs sur le serveur. Vérifiez une première fois que le dossier `uploads/` existe côté LWS et est inscriptible par PHP.
+
+Si la connexion FTP échoue (hébergeur en **FTPS**), ouvrez `deploy-lws.yml` et ajoutez dans l’étape « Déployer par FTP » les clés `protocol: ftps` et le `port` indiqué par LWS (voir commentaire en tête du fichier workflow).
+
+**Base de données** : le workflow ne lance pas les migrations MySQL ; importez `config/database.sql` et les migrations `001` → `004` une fois via phpMyAdmin (ou équivalent), comme décrit plus haut.
+
 ## Développement local
 
 Sans `config.local.php`, l’application utilise les valeurs par défaut (`http://localhost/taskflow`, MySQL `root` sans mot de passe), comme auparavant.
