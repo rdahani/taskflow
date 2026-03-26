@@ -15,6 +15,9 @@ $pdo = getDB();
 // --- Filtres ---
 $filterStatut   = $_GET['statut']   ?? '';
 $filterPriorite = $_GET['priorite'] ?? '';
+// Nettoyer les filtres : n'accepter que les valeurs connues
+if ($filterStatut && $filterStatut !== 'en_retard' && !array_key_exists($filterStatut, TASK_STATUSES)) $filterStatut = '';
+if ($filterPriorite && !array_key_exists($filterPriorite, TASK_PRIORITIES)) $filterPriorite = '';
 $filterDept     = (int)($_GET['dept'] ?? 0);
 $filterBase     = (int)($_GET['base'] ?? 0);
 $filterSearch   = trim($_GET['q'] ?? '');
@@ -29,14 +32,25 @@ if ($currentUser['role'] === 'employe') {
     $params[] = $currentUser['id'];
     $join = "JOIN taches_assignees ta ON ta.tache_id = t.id";
 } elseif (in_array($currentUser['role'], ['superviseur','chef_dept'])) {
-    $where[] = "t.departement_id = ?";
-    $params[] = $currentUser['departement_id'];
+    if ($currentUser['departement_id']) {
+        $where[] = "t.departement_id = ?";
+        $params[] = $currentUser['departement_id'];
+    } else {
+        $where[] = "1=0"; // Aucun département assigné
+    }
     $join = "";
 } else {
     $join = "";
 }
 
-if ($filterStatut)   { $where[] = "t.statut = ?";           $params[] = $filterStatut; }
+if ($filterStatut === 'en_retard') {
+    // Statut virtuel : tâches non terminées dépassant leur échéance
+    $where[] = "t.statut NOT IN ('termine','annule','rejete')";
+    $where[] = "t.date_echeance < CURDATE()";
+} elseif ($filterStatut) {
+    $where[] = "t.statut = ?";
+    $params[] = $filterStatut;
+}
 if ($filterPriorite) { $where[] = "t.priorite = ?";         $params[] = $filterPriorite; }
 if ($filterDept)     { $where[] = "t.departement_id = ?";   $params[] = $filterDept; }
 if ($filterBase)     { $where[] = "t.base_id = ?";          $params[] = $filterBase; }

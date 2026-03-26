@@ -37,9 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!array_key_exists($statut, TASK_STATUSES))     $errors[] = 'Statut invalide.';
     if (!array_key_exists($priorite, TASK_PRIORITIES)) $errors[] = 'Priorité invalide.';
 
-    $ech_ts = strtotime($date_ech);
-    if ($ech_ts < strtotime(date('Y-m-d'))) $errors[] = "La date d'échéance ne peut pas être dans le passé.";
-    if (!empty($date_debut) && strtotime($date_debut) > $ech_ts) $errors[] = "La date de début ne peut pas être après la date d'échéance.";
+    $ech_ts = $date_ech !== '' ? @strtotime($date_ech) : false;
+    if ($ech_ts === false) {
+        $errors[] = "Format de date d'échéance invalide.";
+    } else {
+        if ($ech_ts < strtotime(date('Y-m-d'))) {
+            $errors[] = "La date d'échéance ne peut pas être dans le passé.";
+        }
+        if (!empty($date_debut)) {
+            $debut_ts = @strtotime($date_debut);
+            if ($debut_ts !== false && $debut_ts > $ech_ts) {
+                $errors[] = "La date de début ne peut pas être après la date d'échéance.";
+            }
+        }
+    }
 
     if (empty($errors)) {
         $stmt = $pdo->prepare("INSERT INTO taches
@@ -50,11 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentUser['id'], $dept_id, $base_id, $cat_id, $pourcent, $parent_id]);
         $taskId = (int)$pdo->lastInsertId();
 
-        // Assignations
+        // Assignations — vérifier que l'utilisateur existe et est actif
         if (!empty($assignes)) {
             $ins = $pdo->prepare("INSERT IGNORE INTO taches_assignees (tache_id,user_id) VALUES (?,?)");
+            $validUser = $pdo->prepare("SELECT id FROM users WHERE id=? AND actif=1");
             foreach ($assignes as $uid) {
                 $uid = (int)$uid;
+                if ($uid < 1) continue;
+                $validUser->execute([$uid]);
+                if (!$validUser->fetch()) continue;
                 $ins->execute([$taskId, $uid]);
                 // Notification
                 if ($uid !== $currentUser['id']) {

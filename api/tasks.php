@@ -28,7 +28,11 @@ switch ($action) {
             $where[] = 'ta.user_id = ?'; $params[] = $user['id'];
             $join = 'JOIN taches_assignees ta ON ta.tache_id=t.id';
         } elseif (in_array($user['role'],['superviseur','chef_dept'])) {
-            $where[] = 't.departement_id = ?'; $params[] = $user['departement_id'];
+            if ($user['departement_id']) {
+                $where[] = 't.departement_id = ?'; $params[] = $user['departement_id'];
+            } else {
+                $where[] = '1=0';
+            }
             $join = '';
         } else { $join = ''; }
 
@@ -64,7 +68,11 @@ switch ($action) {
             $where[] = 'ta.user_id=?'; $params[]=$user['id'];
             $join = 'JOIN taches_assignees ta ON ta.tache_id=t.id';
         } elseif (in_array($user['role'],['superviseur','chef_dept'])) {
-            $where[] = 't.departement_id=?'; $params[]=$user['departement_id'];
+            if ($user['departement_id']) {
+                $where[] = 't.departement_id=?'; $params[]=$user['departement_id'];
+            } else {
+                $where[] = '1=0';
+            }
         }
 
         $stmt = $pdo->prepare("SELECT DISTINCT t.id,t.titre,t.statut FROM taches t $join WHERE ".implode(' AND ',$where)." LIMIT 8");
@@ -147,8 +155,32 @@ switch ($action) {
             break;
         }
         require_once __DIR__ . '/../includes/audit.php';
-        $pdo->prepare('DELETE FROM taches WHERE id=?')->execute([$id]);
-        logAudit((int) currentUser()['id'], 'task_delete', 'tache', $id, mb_substr((string) $row['titre'], 0, 200));
+        // Supprimer les fichiers physiques avant suppression BDD
+        $fStmt = $pdo->prepare('SELECT chemin FROM fichiers WHERE tache_id=?');
+        $fStmt->execute([$id]);
+        foreach ($fStmt->fetchAll() as $f) {
+            $abs = UPLOAD_DIR . $f['chemin'];
+            if (is_file($abs)) @unlink($abs);
+        }
+        // Suppression en cascade (si pas de FK dans la BDD)
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM taches_assignees WHERE tache_id=?')->execute([$id]);
+            $pdo->prepare('DELETE FROM commentaires WHERE tache_id=?')->execute([$id]);
+            $pdo->prepare('DELETE FROM fichiers WHERE tache_id=?')->execute([$id]);
+            $pdo->prepare('DELETE FROM historique WHERE tache_id=?')->execute([$id]);
+            try {
+                $pdo->prepare('DELETE FROM tache_chat_messages WHERE tache_id=?')->execute([$id]);
+            } catch (Throwable $ignored) {}
+            $pdo->prepare('DELETE FROM taches WHERE id=?')->execute([$id]);
+            logAudit((int) currentUser()['id'], 'task_delete', 'tache', $id, mb_substr((string) $row['titre'], 0, 200));
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            error_log('TaskFlow delete task: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Erreur lors de la suppression']);
+            break;
+        }
         echo json_encode(['success' => true]);
         break;
 

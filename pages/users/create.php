@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$nom,$prenom,$email,$hash,$role,$deptId,$baseId,$poste,$tel,$actif,$notifyEmail,$photoName]);
             $newId = (int) $pdo->lastInsertId();
             logAudit((int) $currentUser['id'], 'user_create', 'user', $newId, $email);
-            flashMessage('success','Utilisateur créé. Mot de passe : '.sanitize($password));
+            flashMessage('success','Utilisateur créé. Communiquez le mot de passe à l\'utilisateur en privé.');
         }
         redirect('/pages/users/list.php');
     }

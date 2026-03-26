@@ -46,9 +46,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($titre))    $errors[] = 'Le titre est obligatoire.';
     if (empty($date_ech)) $errors[] = "La date d'échéance est obligatoire.";
 
-    $ech_ts = strtotime($date_ech);
-    if ($ech_ts < strtotime(date('Y-m-d'))) $errors[] = "La date d'échéance ne peut pas être dans le passé.";
-    if (!empty($date_debut) && strtotime($date_debut) > $ech_ts) $errors[] = "La date de début ne peut pas être après la date d'échéance.";
+    $ech_ts = $date_ech !== '' ? @strtotime($date_ech) : false;
+    if ($ech_ts === false) {
+        $errors[] = "Format de date d'échéance invalide.";
+    } else {
+        // En édition, on autorise de garder une date passée (tâche en retard existante)
+        // mais on bloque si la DATE a changé ET est dans le passé
+        if ($date_ech !== $task['date_echeance'] && $ech_ts < strtotime(date('Y-m-d'))) {
+            $errors[] = "La nouvelle date d'échéance ne peut pas être dans le passé.";
+        }
+        if (!empty($date_debut)) {
+            $debut_ts = @strtotime($date_debut);
+            if ($debut_ts !== false && $debut_ts > $ech_ts) {
+                $errors[] = "La date de début ne peut pas être après la date d'échéance.";
+            }
+        }
+    }
 
     if (empty($errors)) {
         // Log changes

@@ -19,15 +19,20 @@ if ($currentUser['role'] === 'employe') {
     $recentStmt = $pdo->prepare($recentSql);
     $recentStmt->execute([$currentUser['id']]);
 } elseif (in_array($currentUser['role'], ['superviseur','chef_dept'])) {
-    $recentSql = "SELECT t.*, u.prenom, u.nom, b.nom AS base_nom, d.nom AS dept_nom
-        FROM taches t
-        LEFT JOIN users u ON u.id = t.createur_id
-        LEFT JOIN bases b ON b.id = t.base_id
-        LEFT JOIN departements d ON d.id = t.departement_id
-        WHERE t.departement_id = ?
-        ORDER BY t.date_echeance ASC LIMIT 8";
-    $recentStmt = $pdo->prepare($recentSql);
-    $recentStmt->execute([$currentUser['departement_id']]);
+    if ($currentUser['departement_id']) {
+        $recentSql = "SELECT t.*, u.prenom, u.nom, b.nom AS base_nom, d.nom AS dept_nom
+            FROM taches t
+            LEFT JOIN users u ON u.id = t.createur_id
+            LEFT JOIN bases b ON b.id = t.base_id
+            LEFT JOIN departements d ON d.id = t.departement_id
+            WHERE t.departement_id = ?
+            ORDER BY t.date_echeance ASC LIMIT 8";
+        $recentStmt = $pdo->prepare($recentSql);
+        $recentStmt->execute([$currentUser['departement_id']]);
+    } else {
+        $recentStmt = $pdo->prepare("SELECT t.*, u.prenom, u.nom, NULL AS base_nom, NULL AS dept_nom FROM taches t LEFT JOIN users u ON u.id=t.createur_id WHERE 1=0");
+        $recentStmt->execute([]);
+    }
 } else {
     $recentSql = "SELECT t.*, u.prenom, u.nom, b.nom AS base_nom, d.nom AS dept_nom
         FROM taches t

@@ -124,8 +124,8 @@ require_once __DIR__ . '/../../includes/header.php';
               </a>
               <?php if (!$isSelf): ?>
               <button
-                class="btn btn-sm <?= $u['actif'] ? 'btn-danger-outline' : 'btn-success-outline' ?>"
-                style="padding:4px 8px;font-size:11px"
+                class="btn btn-sm btn-secondary"
+                style="padding:4px 8px;font-size:11px;color:<?= $u['actif'] ? 'var(--danger,#DC2626)' : 'var(--success,#16A34A)' ?>;border-color:<?= $u['actif'] ? 'var(--danger,#DC2626)' : 'var(--success,#16A34A)' ?>"
                 id="toggle-<?= $u['id'] ?>"
                 title="<?= $u['actif'] ? 'Désactiver ce compte' : 'Réactiver ce compte' ?>"
                 onclick="toggleUser(<?= $u['id'] ?>, <?= (int)$u['actif'] ?>)">

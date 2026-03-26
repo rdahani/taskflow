@@ -311,6 +311,9 @@ function getDashboardStats(array $user): array {
                 WHERE ta.user_id = ?
                 GROUP BY real_statut";
     } elseif (in_array($user['role'], ['superviseur','chef_dept'])) {
+        if (empty($user['departement_id'])) {
+            return $stats; // Aucun département : stats vides
+        }
         $params[] = $user['departement_id'];
         $sql = "SELECT ($realStatut) AS real_statut, COUNT(*) as n
                 FROM taches t

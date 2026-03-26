@@ -59,11 +59,11 @@ function canViewTask(array $task): bool {
     if (!$user) return false;
     if (isCheffe()) return true;
     if ($user['role'] === 'chef_dept')
-        return $task['departement_id'] == $user['departement_id'];
+        return $user['departement_id'] && (int)$task['departement_id'] === (int)$user['departement_id'];
     if ($user['role'] === 'superviseur')
-        return $task['departement_id'] == $user['departement_id'];
+        return $user['departement_id'] && (int)$task['departement_id'] === (int)$user['departement_id'];
     // Employé : seulement ses tâches assignées
-    return isAssignedToTask($task['id'], $user['id']) || $task['createur_id'] == $user['id'];
+    return isAssignedToTask($task['id'], $user['id']) || (int)$task['createur_id'] === (int)$user['id'];
 }
 
 function isAssignedToTask(int $taskId, int $userId): bool {
@@ -80,9 +80,9 @@ function canEditTask(array $task): bool {
     if (isAdmin()) return true;
     if ($user['role'] === 'cheffe_mission') return false; // vue seule
     if ($user['role'] === 'chef_dept')
-        return $task['departement_id'] == $user['departement_id'];
+        return $user['departement_id'] && (int)$task['departement_id'] === (int)$user['departement_id'];
     if ($user['role'] === 'superviseur')
-        return $task['departement_id'] == $user['departement_id'];
+        return $user['departement_id'] && (int)$task['departement_id'] === (int)$user['departement_id'];
     // Employé : peut seulement changer le statut
     return isAssignedToTask($task['id'], $user['id']);
 }

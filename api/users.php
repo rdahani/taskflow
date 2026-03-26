@@ -26,7 +26,7 @@ switch ($action) {
         $actif = (int)($body['actif'] ?? 0);
         $pdo->prepare("UPDATE users SET actif=? WHERE id=?")->execute([$actif, $id]);
         require_once __DIR__ . '/../includes/audit.php';
-        logAudit((int)$_SESSION['user_id'], $actif ? 'user_activate' : 'user_deactivate', 'user', $id, '');
+        logAudit((int) currentUser()['id'], $actif ? 'user_activate' : 'user_deactivate', 'user', $id, '');
         echo json_encode(['success'=>true]);
         break;
 
@@ -43,7 +43,7 @@ switch ($action) {
         }
         $pdo->prepare("UPDATE users SET role=? WHERE id=?")->execute([$role, $id]);
         require_once __DIR__ . '/../includes/audit.php';
-        logAudit((int)$_SESSION['user_id'], 'user_update_role', 'user', $id, 'role:'.$role);
+        logAudit((int) currentUser()['id'], 'user_update_role', 'user', $id, 'role:'.$role);
         echo json_encode(['success'=>true]);
         break;
 

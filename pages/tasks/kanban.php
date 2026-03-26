@@ -22,15 +22,21 @@ if ($currentUser['role'] === 'employe') {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$currentUser['id']]);
 } elseif (in_array($currentUser['role'], ['superviseur','chef_dept'])) {
-    $sql = "SELECT t.*,d.nom AS dept_nom,
-        (SELECT GROUP_CONCAT(CONCAT(u2.prenom,' ',u2.nom) SEPARATOR ', ')
-         FROM taches_assignees ta2 JOIN users u2 ON u2.id=ta2.user_id WHERE ta2.tache_id=t.id) AS assignes
-        FROM taches t
-        LEFT JOIN departements d ON d.id=t.departement_id
-        WHERE t.departement_id=? AND t.statut NOT IN ('annule')
-        ORDER BY FIELD(t.priorite,'urgente','haute','normale','basse'), t.date_echeance ASC";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$currentUser['departement_id']]);
+    if ($currentUser['departement_id']) {
+        $sql = "SELECT t.*,d.nom AS dept_nom,
+            (SELECT GROUP_CONCAT(CONCAT(u2.prenom,' ',u2.nom) SEPARATOR ', ')
+             FROM taches_assignees ta2 JOIN users u2 ON u2.id=ta2.user_id WHERE ta2.tache_id=t.id) AS assignes
+            FROM taches t
+            LEFT JOIN departements d ON d.id=t.departement_id
+            WHERE t.departement_id=? AND t.statut NOT IN ('annule')
+            ORDER BY FIELD(t.priorite,'urgente','haute','normale','basse'), t.date_echeance ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$currentUser['departement_id']]);
+    } else {
+        // Aucun département : requête vide
+        $stmt = $pdo->prepare("SELECT t.*,d.nom AS dept_nom, NULL AS assignes FROM taches t LEFT JOIN departements d ON d.id=t.departement_id WHERE 1=0");
+        $stmt->execute([]);
+    }
 } else {
     $sql = "SELECT t.*,d.nom AS dept_nom,
         (SELECT GROUP_CONCAT(CONCAT(u2.prenom,' ',u2.nom) SEPARATOR ', ')
