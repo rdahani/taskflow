@@ -163,6 +163,12 @@ if (defined('APP_URL')) {
       <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
       <span class="nav-label">Journal d’audit</span>
     </a>
+
+    <a href="<?= APP_URL ?>/pages/admin/logs.php"
+       class="nav-link <?= strpos($path,'admin/logs')!==false ? 'active' : '' ?>">
+      <span class="nav-icon"><i class="fa-solid fa-bug"></i></span>
+      <span class="nav-label">Journal technique</span>
+    </a>
     <?php endif; ?>
 
   </nav>

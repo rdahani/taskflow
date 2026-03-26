@@ -30,6 +30,10 @@ return [
     // Optionnel : durée d’inactivité session (secondes), défaut 1800
     // 'SESSION_TIMEOUT' => 1800,
 
+    // Journal applicatif (storage/logs/taskflow-AAAA-MM-JJ.log)
+    // 'LOG_ENABLED' => true,
+    // 'LOG_LEVEL'   => 'warning', // debug | info | warning | error
+
     // --- Notifications par e-mail (même contenu que dans l’app) ---
     // 'MAIL_NOTIFICATIONS' => true,
     // 'MAIL_FROM'          => 'noreply@votre-domaine.tld',

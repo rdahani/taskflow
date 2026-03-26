@@ -157,4 +157,11 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../includes/security_headers.php';
 sendSecurityHeaders();
 
+// Conservées après unset($GLOBALS['tf_local']) pour includes/logger.php et la suite
+define('TF_LOG_ENABLED', tf_cfg_bool('LOG_ENABLED', true));
+define('TF_LOG_LEVEL_STR', strtolower((string) tf_cfg('LOG_LEVEL', 'debug')));
+
 unset($GLOBALS['tf_local']);
+
+require_once __DIR__ . '/../includes/logger.php';
+tf_register_error_handlers();

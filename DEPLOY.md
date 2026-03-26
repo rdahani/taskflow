@@ -78,10 +78,11 @@ Voir les clés commentées dans `config/config.local.example.php`. Les utilisate
 
 ```bash
 chmod 755 uploads
+mkdir -p storage/logs && chmod 755 storage/logs
 chmod 640 config/config.local.php
 ```
 
-Le serveur web doit pouvoir écrire dans `uploads/` pour les pièces jointes.
+Le serveur web doit pouvoir écrire dans `uploads/` pour les pièces jointes, et dans **`storage/logs/`** pour le journal technique (erreurs PHP). Ne pas exposer ce dossier publiquement si possible.
 
 ### 5. Apache
 

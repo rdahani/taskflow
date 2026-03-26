@@ -1,0 +1,2 @@
+# Interdire l’accès HTTP direct aux fichiers .log
+Require all denied
