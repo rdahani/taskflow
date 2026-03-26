@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/../../includes/layout_init.php';
 
-$isEdit     = isset($_GET['id']);
-$userId     = $isEdit ? (int)$_GET['id'] : 0;
-$pageTitle  = $isEdit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur';
+// En édition, l’id doit rester disponible après un POST (certains environnements n’ont pas ?id= sur la requête POST).
+$userId = (int) ($_GET['id'] ?? 0);
+if ($userId < 1 && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    $userId = (int) ($_POST['id'] ?? 0);
+}
+$isEdit    = $userId > 0;
+$pageTitle = $isEdit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur';
 $breadcrumbs = [
   ['label'=>'Accueil','url'=>APP_URL.'/index.php'],
   ['label'=>'Utilisateurs','url'=>APP_URL.'/pages/users/list.php'],
@@ -109,6 +113,9 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <form method="POST" enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
+<?php if ($isEdit): ?>
+<input type="hidden" name="id" value="<?= (int) $userId ?>">
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1fr 280px;gap:20px">
   <div>
