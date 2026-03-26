@@ -25,6 +25,25 @@ switch ($action) {
         $id    = (int)($body['id'] ?? 0);
         $actif = (int)($body['actif'] ?? 0);
         $pdo->prepare("UPDATE users SET actif=? WHERE id=?")->execute([$actif, $id]);
+        require_once __DIR__ . '/../includes/audit.php';
+        logAudit((int)$_SESSION['user_id'], $actif ? 'user_activate' : 'user_deactivate', 'user', $id, '');
+        echo json_encode(['success'=>true]);
+        break;
+
+    case 'update_role':
+        if (!isAdmin()) { echo json_encode(['success'=>false,'error'=>'Accès refusé']); break; }
+        $id   = (int)($body['id'] ?? 0);
+        $role = trim($body['role'] ?? '');
+        if ($id < 1 || !array_key_exists($role, ROLES)) {
+            echo json_encode(['success'=>false,'error'=>'Données invalides']); break;
+        }
+        // Interdire de se rétrograder soi-même
+        if ($id === (int)($_SESSION['user_id'] ?? 0)) {
+            echo json_encode(['success'=>false,'error'=>'Impossible de modifier son propre rôle']); break;
+        }
+        $pdo->prepare("UPDATE users SET role=? WHERE id=?")->execute([$role, $id]);
+        require_once __DIR__ . '/../includes/audit.php';
+        logAudit((int)$_SESSION['user_id'], 'user_update_role', 'user', $id, 'role:'.$role);
         echo json_encode(['success'=>true]);
         break;
 

@@ -146,6 +146,12 @@ if (defined('APP_URL')) {
       <span class="nav-label">Départements</span>
     </a>
 
+    <a href="<?= APP_URL ?>/pages/admin/droits.php"
+       class="nav-link <?= strpos($path,'admin/droits')!==false ? 'active' : '' ?>">
+      <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+      <span class="nav-label">Droits d'accès</span>
+    </a>
+
     <a href="<?= APP_URL ?>/pages/admin/roles.php"
        class="nav-link <?= strpos($path,'admin/roles')!==false ? 'active' : '' ?>">
       <span class="nav-icon"><i class="fa-solid fa-user-shield"></i></span>

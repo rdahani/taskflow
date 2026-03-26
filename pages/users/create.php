@@ -111,7 +111,11 @@ require_once __DIR__ . '/../../includes/header.php';
 </div>
 <?php endif; ?>
 
-<form method="POST" enctype="multipart/form-data">
+<form method="POST"
+      action="<?= $isEdit
+        ? APP_URL.'/pages/users/edit.php?id='.(int)$userId
+        : APP_URL.'/pages/users/create.php' ?>"
+      enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
 <?php if ($isEdit): ?>
 <input type="hidden" name="id" value="<?= (int) $userId ?>">
