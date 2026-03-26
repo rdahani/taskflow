@@ -1,13 +1,22 @@
 <?php
-require_once __DIR__ . '/../../config/config.php';
-$pageTitle  = 'Gestion des utilisateurs';
+require_once __DIR__ . '/../../includes/layout_init.php';
+
+if (!isAdmin()) {
+    flashMessage('error', 'Accès réservé aux administrateurs.');
+    redirect('/index.php');
+}
+
+$pageTitle   = 'Gestion des utilisateurs';
 $breadcrumbs = [
-  ['label'=>'Accueil','url'=>APP_URL.'/index.php'],
-  ['label'=>'Utilisateurs','url'=>''],
+  ['label' => 'Accueil', 'url' => APP_URL . '/index.php'],
+  ['label' => 'Utilisateurs', 'url' => ''],
 ];
 require_once __DIR__ . '/../../includes/header.php';
+?>
+<meta name="csrf" content="<?= csrfToken() ?>">
+<?php
 
-if (!isAdmin()) { flashMessage('error','Accès réservé aux administrateurs.'); redirect('/index.php'); }
+$apiUsersUrl = rtrim(APP_URL, '/') . '/api/users.php';
 
 $pdo = getDB();
 
@@ -167,16 +176,18 @@ async function toggleUser(id, actif) {
   const msg = actif ? 'Désactiver cet utilisateur ?' : 'Réactiver cet utilisateur ?';
   if (!confirm(msg)) return;
   const csrf = document.querySelector('meta[name=csrf]')?.content || '';
-  const res  = await fetch('<?= APP_URL ?>/api/users.php', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
-    body: JSON.stringify({action:'toggle',id,actif:actif?0:1})
+  const url = (typeof window.tfUrl === 'function') ? window.tfUrl('/api/users.php') : <?= json_encode($apiUsersUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  const res  = await fetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+    body: JSON.stringify({ action: 'toggle', id, actif: actif ? 0 : 1, csrf_token: csrf })
   });
-  const data = await res.json();
-  if (data.success) { showToast('Utilisateur mis à jour','success'); setTimeout(()=>location.reload(),800); }
-  else showToast('Erreur','error');
+  let data;
+  try { data = await res.json(); } catch (e) { showToast('Réponse serveur invalide', 'error'); return; }
+  if (data.success) { showToast('Utilisateur mis à jour', 'success'); setTimeout(() => location.reload(), 800); }
+  else showToast(data.error || 'Action refusée (CSRF ou droits)', 'error');
 }
 </script>
-<meta name="csrf" content="<?= csrfToken() ?>">
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
