@@ -134,6 +134,24 @@ if (defined('APP_URL')) {
       <span class="nav-label">Nouvel utilisateur</span>
     </a>
 
+    <a href="<?= APP_URL ?>/pages/admin/bases.php"
+       class="nav-link <?= strpos($path,'admin/bases')!==false ? 'active' : '' ?>">
+      <span class="nav-icon"><i class="fa-solid fa-location-dot"></i></span>
+      <span class="nav-label">Bases géographiques</span>
+    </a>
+
+    <a href="<?= APP_URL ?>/pages/admin/departements.php"
+       class="nav-link <?= strpos($path,'admin/departements')!==false ? 'active' : '' ?>">
+      <span class="nav-icon"><i class="fa-solid fa-building"></i></span>
+      <span class="nav-label">Départements</span>
+    </a>
+
+    <a href="<?= APP_URL ?>/pages/admin/roles.php"
+       class="nav-link <?= strpos($path,'admin/roles')!==false ? 'active' : '' ?>">
+      <span class="nav-icon"><i class="fa-solid fa-user-shield"></i></span>
+      <span class="nav-label">Rôles</span>
+    </a>
+
     <a href="<?= APP_URL ?>/pages/admin/audit.php"
        class="nav-link <?= strpos($path,'admin/audit')!==false ? 'active' : '' ?>">
       <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
