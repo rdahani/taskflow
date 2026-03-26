@@ -35,6 +35,8 @@ Puis éditer `config/config.local.php` : `APP_URL`, `DB_*`, et en production `AP
 
 Sans ce fichier, les valeurs par défaut restent celles du développement local (`http://localhost/taskflow`, MySQL `root` sans mot de passe).
 
+**Tester en local tout en gardant `config.local.php` (LWS / prod)** : copier [`config/config.local.dev.example.php`](config/config.local.dev.example.php) vers `config/config.local.dev.php` (ignoré par git). Ce fichier fusionné **après** `config.local.php` force `APP_URL`, la base XAMPP et `SESSION_COOKIE_SECURE` à `false`. URL équivalente à la prod : `http://localhost/taskflow/pages/users/list.php`.
+
 **Déploiement serveur** : voir le guide détaillé [`DEPLOY.md`](DEPLOY.md).
 
 ### 5. Permissions dossier uploads

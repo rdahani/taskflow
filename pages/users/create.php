@@ -1,10 +1,19 @@
 <?php
 require_once __DIR__ . '/../../includes/layout_init.php';
 
-// En édition, l’id doit rester disponible après un POST (certains environnements n’ont pas ?id= sur la requête POST).
-$userId = (int) ($_GET['id'] ?? 0);
-if ($userId < 1 && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
-    $userId = (int) ($_POST['id'] ?? 0);
+// Édition depuis edit.php : id déjà validé (évite divergence GET/POST selon l’hébergeur).
+if (defined('TF_EDIT_USER_ID')) {
+    $userId = (int) TF_EDIT_USER_ID;
+} else {
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if ($method === 'POST') {
+        $userId = (int) ($_POST['id'] ?? 0);
+        if ($userId < 1) {
+            $userId = (int) ($_GET['id'] ?? 0);
+        }
+    } else {
+        $userId = (int) ($_GET['id'] ?? 0);
+    }
 }
 $isEdit    = $userId > 0;
 $pageTitle = $isEdit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur';

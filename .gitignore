@@ -1,5 +1,6 @@
 # Secrets & environnement local
 config/config.local.php
+config/config.local.dev.php
 .env
 .env.*
 

@@ -10,6 +10,13 @@ if (is_readable(__DIR__ . '/config.local.php')) {
         $GLOBALS['tf_local'] = $loaded;
     }
 }
+// Surcharge machine de dev (XAMPP, etc.) — garder la prod dans config.local.php
+if (is_readable(__DIR__ . '/config.local.dev.php')) {
+    $dev = require __DIR__ . '/config.local.dev.php';
+    if (is_array($dev)) {
+        $GLOBALS['tf_local'] = array_merge($GLOBALS['tf_local'], $dev);
+    }
+}
 
 /**
  * @param mixed $default
