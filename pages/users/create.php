@@ -60,6 +60,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($emailCheck->fetch()) $errors[] = 'Cet email est déjà utilisé.';
 
     if (empty($errors)) {
+        // Auto-migration : s'assurer que notify_email existe
+        static $colNotifyEmail = null;
+        if ($colNotifyEmail === null) {
+            try {
+                $pdo->query("SELECT notify_email FROM users LIMIT 0");
+                $colNotifyEmail = true;
+            } catch (PDOException $migEx) {
+                $colNotifyEmail = false;
+                try {
+                    $pdo->exec("ALTER TABLE users ADD COLUMN notify_email TINYINT(1) NOT NULL DEFAULT 1 AFTER email");
+                    $colNotifyEmail = true;
+                } catch (PDOException $e2) { /* on continue sans */ }
+            }
+        }
+
         // Photo
         $photoName = $user['photo'] ?? null;
         if (!empty($_FILES['photo']['name'])) {
@@ -73,24 +88,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         require_once __DIR__ . '/../../includes/audit.php';
-        if ($isEdit) {
-            $sql = "UPDATE users SET nom=?,prenom=?,email=?,role=?,departement_id=?,base_id=?,poste=?,telephone=?,actif=?,notify_email=?,photo=?";
-            $params = [$nom,$prenom,$email,$role,$deptId,$baseId,$poste,$tel,$actif,$notifyEmail,$photoName];
-            if (!empty($password)) { $sql .= ',password=?'; $params[] = password_hash($password, PASSWORD_BCRYPT); }
-            $sql .= ' WHERE id=?'; $params[] = $userId;
-            $pdo->prepare($sql)->execute($params);
-            logAudit((int) $currentUser['id'], 'user_update', 'user', $userId, $email);
-            flashMessage('success','Utilisateur modifié.');
-        } else {
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-            $pdo->prepare("INSERT INTO users (nom,prenom,email,password,role,departement_id,base_id,poste,telephone,actif,notify_email,photo)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$nom,$prenom,$email,$hash,$role,$deptId,$baseId,$poste,$tel,$actif,$notifyEmail,$photoName]);
-            $newId = (int) $pdo->lastInsertId();
-            logAudit((int) $currentUser['id'], 'user_create', 'user', $newId, $email);
-            flashMessage('success','Utilisateur créé. Communiquez le mot de passe à l\'utilisateur en privé.');
+        try {
+            if ($isEdit) {
+                $setCols = "nom=?,prenom=?,email=?,role=?,departement_id=?,base_id=?,poste=?,telephone=?,actif=?";
+                $params  = [$nom,$prenom,$email,$role,$deptId,$baseId,$poste,$tel,$actif];
+                if ($colNotifyEmail) { $setCols .= ',notify_email=?'; $params[] = $notifyEmail; }
+                $setCols .= ',photo=?'; $params[] = $photoName;
+                if (!empty($password)) { $setCols .= ',password=?'; $params[] = password_hash($password, PASSWORD_BCRYPT); }
+                $params[] = $userId;
+                $pdo->prepare("UPDATE users SET $setCols WHERE id=?")->execute($params);
+                logAudit((int) $currentUser['id'], 'user_update', 'user', $userId, $email);
+                flashMessage('success','Utilisateur modifié.');
+            } else {
+                $hash         = password_hash($password, PASSWORD_BCRYPT);
+                $insertCols   = 'nom,prenom,email,password,role,departement_id,base_id,poste,telephone,actif,photo';
+                $insertMarks  = '?,?,?,?,?,?,?,?,?,?,?';
+                $insertParams = [$nom,$prenom,$email,$hash,$role,$deptId,$baseId,$poste,$tel,$actif,$photoName];
+                if ($colNotifyEmail) {
+                    $insertCols  .= ',notify_email';
+                    $insertMarks .= ',?';
+                    $insertParams[] = $notifyEmail;
+                }
+                $pdo->prepare("INSERT INTO users ($insertCols) VALUES ($insertMarks)")->execute($insertParams);
+                $newId = (int) $pdo->lastInsertId();
+                logAudit((int) $currentUser['id'], 'user_create', 'user', $newId, $email);
+                flashMessage('success','Utilisateur créé. Communiquez le mot de passe à l\'utilisateur en privé.');
+            }
+            redirect('/pages/users/list.php');
+        } catch (PDOException $e) {
+            error_log('TaskFlow user save: ' . $e->getMessage());
+            $errors[] = defined('APP_DEBUG') && APP_DEBUG
+                ? 'Erreur BD : ' . htmlspecialchars($e->getMessage())
+                : 'Erreur lors de la sauvegarde. Veuillez réessayer.';
         }
-        redirect('/pages/users/list.php');
     }
 }
 
@@ -112,9 +142,7 @@ require_once __DIR__ . '/../../includes/header.php';
 <?php endif; ?>
 
 <form method="POST"
-      action="<?= $isEdit
-        ? APP_URL.'/pages/users/edit.php?id='.(int)$userId
-        : APP_URL.'/pages/users/create.php' ?>"
+      action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . ($isEdit ? '?id='.(int)$userId : '') ?>"
       enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
 <?php if ($isEdit): ?>
