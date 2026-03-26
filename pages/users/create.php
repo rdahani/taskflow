@@ -127,6 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $depts = $pdo->query("SELECT id,nom FROM departements WHERE actif=1 ORDER BY nom")->fetchAll();
 $bases = $pdo->query("SELECT id,nom FROM bases WHERE actif=1 ORDER BY nom")->fetchAll();
 
+// URL explicite : PHP_SELF est souvent faux (réécriture, index.php front) → POST perd edit.php.
+$formAction = $isEdit
+    ? APP_URL . '/pages/users/edit.php?id=' . (int) $userId
+    : APP_URL . '/pages/users/create.php';
+
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -142,7 +147,7 @@ require_once __DIR__ . '/../../includes/header.php';
 <?php endif; ?>
 
 <form method="POST"
-      action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . ($isEdit ? '?id='.(int)$userId : '') ?>"
+      action="<?= htmlspecialchars($formAction, ENT_QUOTES, 'UTF-8') ?>"
       enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
 <?php if ($isEdit): ?>
@@ -184,20 +189,19 @@ require_once __DIR__ . '/../../includes/header.php';
     <div class="card">
       <div class="card-header"><span class="card-title"><?= $isEdit ? 'Changer le mot de passe' : 'Mot de passe' ?></span></div>
       <div class="card-body">
-        <?php if ($isEdit): ?>
-        <div class="form-hint" style="margin-bottom:12px">Laissez vide pour ne pas changer le mot de passe.</div>
-        <?php endif; ?>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Mot de passe <?= !$isEdit?'<span class="req">*</span>':'' ?></label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" minlength="8">
+            <input type="password" name="password" class="form-control" placeholder="••••••••"
+              <?= $isEdit ? '' : 'minlength="8" required' ?>>
           </div>
           <div class="form-group">
             <label class="form-label">Confirmer</label>
-            <input type="password" name="password2" class="form-control" placeholder="••••••••">
+            <input type="password" name="password2" class="form-control" placeholder="••••••••"
+              <?= $isEdit ? '' : 'minlength="8"' ?>>
           </div>
         </div>
-        <div class="form-hint">Minimum 8 caractères.</div>
+        <div class="form-hint"><?= $isEdit ? 'Laissez vide pour ne rien changer. Sinon minimum 8 caractères (validation à l’enregistrement).' : 'Minimum 8 caractères.' ?></div>
       </div>
     </div>
   </div>
