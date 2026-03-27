@@ -1,17 +1,9 @@
-/* TaskFlow — service worker minimal (cache des assets statiques) */
-const CACHE = 'taskflow-sw-v1';
-const ASSETS = [
-  './assets/css/style.css',
-  './assets/css/inter.css',
-  './assets/js/app.js'
-];
+/* TaskFlow — service worker (cache assets statiques uniquement) */
+const CACHE = 'taskflow-sw-v2';
+const STATIC_EXTS = ['.css', '.js', '.woff', '.woff2', '.ttf', '.otf',
+                     '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.svg'];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS).catch(() => {}))
-  );
-  self.skipWaiting();
-});
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -25,12 +17,26 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
   const url = new URL(req.url);
+
+  // Ignorer les autres origines
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.endsWith('.php') && !url.pathname.endsWith('index.php')) {
-    return;
-  }
+
+  // N'intercepter QUE les assets statiques (CSS, JS, fonts, images)
+  const isStatic = STATIC_EXTS.some((ext) => url.pathname.endsWith(ext));
+  if (!isStatic) return; // laisser le navigateur gérer les pages PHP
+
   event.respondWith(
-    fetch(req).catch(() => caches.match(req).then((r) => r || caches.match('./index.php')))
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, clone));
+        }
+        return response;
+      });
+    })
   );
 });
