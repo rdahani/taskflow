@@ -80,7 +80,7 @@ function tf_log_sanitize_context(array $context): array {
     foreach ($context as $k => $v) {
         $key = strtolower((string) $k);
         foreach ($redact as $r) {
-            if (str_contains($key, $r)) {
+            if (strpos($key, $r) !== false) {
                 $v = '[redacted]';
                 break;
             }

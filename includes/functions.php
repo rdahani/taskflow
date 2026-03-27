@@ -312,7 +312,7 @@ function getDashboardStats(array $user): array {
                 GROUP BY real_statut";
     } elseif (in_array($user['role'], ['superviseur','chef_dept'])) {
         if (empty($user['departement_id'])) {
-            return $stats; // Aucun département : stats vides
+            return ['total'=>0,'pas_fait'=>0,'en_cours'=>0,'en_attente'=>0,'termine'=>0,'annule'=>0,'en_retard'=>0,'rejete'=>0];
         }
         $params[] = $user['departement_id'];
         $sql = "SELECT ($realStatut) AS real_statut, COUNT(*) as n
