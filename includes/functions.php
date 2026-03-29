@@ -206,32 +206,32 @@ function handleFileUpload(array $file, int $taskId): ?array {
     ];
 }
 
-/** Supprime une pièce jointe si elle appartient à la tâche. Retourne le nom d’origine ou null. */
+/** Supprime une pièce jointe si elle appartient à la tâche. Retourne le nom d'origine ou null. */
 function deleteTaskFile(int $fileId, int $taskId): ?string {
     $pdo  = getDB();
-    $stmt = $pdo->prepare(‘SELECT chemin, nom_original FROM fichiers WHERE id = ? AND tache_id = ?’);
+    $stmt = $pdo->prepare('SELECT chemin, nom_original FROM fichiers WHERE id = ? AND tache_id = ?');
     $stmt->execute([$fileId, $taskId]);
     $row = $stmt->fetch();
     if (!$row) {
         return null;
     }
     // Path traversal protection: ensure path stays inside uploads directory
-    $chemin = $row[‘chemin’];
-    if (strpos($chemin, ‘..’) !== false || !preg_match(‘#^tasks/\d+/[a-f0-9]+\.\w+$#’, $chemin)) {
-        error_log(‘TaskFlow: tentative de suppression avec chemin suspect: ‘ . $chemin);
+    $chemin = $row['chemin'];
+    if (strpos($chemin, '..') !== false || !preg_match('#^tasks/\d+/[a-f0-9]+\.\w+$#', $chemin)) {
+        error_log('TaskFlow: tentative de suppression avec chemin suspect: ' . $chemin);
         return null;
     }
     $abs = realpath(UPLOAD_DIR . $chemin);
     $uploadBase = realpath(UPLOAD_DIR);
     if ($abs === false || $uploadBase === false || strpos($abs, $uploadBase) !== 0) {
-        error_log(‘TaskFlow: chemin résolu en dehors du dossier uploads: ‘ . ($abs ?: $chemin));
+        error_log('TaskFlow: chemin résolu en dehors du dossier uploads: ' . ($abs ?: $chemin));
         return null;
     }
     if (is_file($abs)) {
         @unlink($abs);
     }
-    $pdo->prepare(‘DELETE FROM fichiers WHERE id = ?’)->execute([$fileId]);
-    return $row[‘nom_original’];
+    $pdo->prepare('DELETE FROM fichiers WHERE id = ?')->execute([$fileId]);
+    return $row['nom_original'];
 }
 
 // ---------- Notifications ----------
