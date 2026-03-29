@@ -37,7 +37,7 @@ switch ($action) {
         } else { $join = ''; }
 
         $q = trim($_GET['q'] ?? '');
-        if ($q) { $where[] = '(t.titre LIKE ? OR t.description LIKE ?)'; $params[]="%$q%"; $params[]="%$q%"; }
+        if ($q) { $ql = '%' . escapeLike($q) . '%'; $where[] = '(t.titre LIKE ? OR t.description LIKE ?)'; $params[]=$ql; $params[]=$ql; }
         if (!empty($_GET['statut'])) { $where[] = 't.statut=?'; $params[]=$_GET['statut']; }
 
         $stmt = $pdo->prepare("SELECT DISTINCT t.id,t.titre,t.statut,t.priorite,t.date_echeance,t.pourcentage FROM taches t $join WHERE ".implode(' AND ',$where)." ORDER BY t.date_echeance ASC LIMIT 50");
@@ -60,7 +60,8 @@ switch ($action) {
         $q = trim($_GET['q'] ?? '');
         if (strlen($q) < 2) { echo json_encode(['results'=>[]]); break; }
         $user = currentUser();
-        $params = ["%$q%","%$q%"];
+        $ql = '%' . escapeLike($q) . '%';
+        $params = [$ql, $ql];
         $where = ['(t.titre LIKE ? OR t.description LIKE ?)'];
         $join = '';
 

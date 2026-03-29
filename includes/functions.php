@@ -141,13 +141,7 @@ function collectUploadedFiles(string $field = 'fichiers'): array {
 }
 
 function detectMimeType(string $path): string {
-    $mime = 'application/octet-stream';
-    if (function_exists('mime_content_type')) {
-        $t = @mime_content_type($path);
-        if ($t !== false && $t !== '') {
-            return $t;
-        }
-    }
+    // Prefer finfo (uses libmagic) over mime_content_type for more reliable detection
     if (function_exists('finfo_open')) {
         $f = @finfo_open(FILEINFO_MIME_TYPE);
         if ($f) {
@@ -158,7 +152,13 @@ function detectMimeType(string $path): string {
             }
         }
     }
-    return $mime;
+    if (function_exists('mime_content_type')) {
+        $t = @mime_content_type($path);
+        if ($t !== false && $t !== '') {
+            return $t;
+        }
+    }
+    return 'application/octet-stream';
 }
 
 function handleFileUpload(array $file, int $taskId): ?array {
@@ -169,12 +169,20 @@ function handleFileUpload(array $file, int $taskId): ?array {
     if ($ext === '' || !in_array($ext, UPLOAD_ALLOWED, true)) {
         return null;
     }
+    // Block double extensions (e.g. file.php.jpg)
+    $basename = strtolower($file['name']);
+    $dangerous = ['php', 'phtml', 'phar', 'sh', 'bash', 'exe', 'bat', 'cmd', 'cgi', 'pl', 'py', 'jsp', 'asp', 'aspx'];
+    foreach ($dangerous as $d) {
+        if (strpos($basename, '.' . $d . '.') !== false) {
+            return null;
+        }
+    }
     if ((int) $file['size'] > UPLOAD_MAX_SIZE) {
         return null;
     }
 
     $dir = UPLOAD_DIR . 'tasks/' . $taskId . '/';
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {
         error_log('TaskFlow: impossible de créer le dossier uploads: ' . $dir);
         return null;
     }
@@ -183,7 +191,8 @@ function handleFileUpload(array $file, int $taskId): ?array {
         return null;
     }
 
-    $newName = uniqid('file_', true) . '.' . $ext;
+    // Use cryptographically secure random name
+    $newName = bin2hex(random_bytes(16)) . '.' . $ext;
     $dest    = $dir . $newName;
 
     if (!move_uploaded_file($file['tmp_name'], $dest)) {
@@ -200,18 +209,29 @@ function handleFileUpload(array $file, int $taskId): ?array {
 /** Supprime une pièce jointe si elle appartient à la tâche. Retourne le nom d’origine ou null. */
 function deleteTaskFile(int $fileId, int $taskId): ?string {
     $pdo  = getDB();
-    $stmt = $pdo->prepare('SELECT chemin, nom_original FROM fichiers WHERE id = ? AND tache_id = ?');
+    $stmt = $pdo->prepare(‘SELECT chemin, nom_original FROM fichiers WHERE id = ? AND tache_id = ?’);
     $stmt->execute([$fileId, $taskId]);
     $row = $stmt->fetch();
     if (!$row) {
         return null;
     }
-    $abs = UPLOAD_DIR . $row['chemin'];
+    // Path traversal protection: ensure path stays inside uploads directory
+    $chemin = $row[‘chemin’];
+    if (strpos($chemin, ‘..’) !== false || !preg_match(‘#^tasks/\d+/[a-f0-9]+\.\w+$#’, $chemin)) {
+        error_log(‘TaskFlow: tentative de suppression avec chemin suspect: ‘ . $chemin);
+        return null;
+    }
+    $abs = realpath(UPLOAD_DIR . $chemin);
+    $uploadBase = realpath(UPLOAD_DIR);
+    if ($abs === false || $uploadBase === false || strpos($abs, $uploadBase) !== 0) {
+        error_log(‘TaskFlow: chemin résolu en dehors du dossier uploads: ‘ . ($abs ?: $chemin));
+        return null;
+    }
     if (is_file($abs)) {
         @unlink($abs);
     }
-    $pdo->prepare('DELETE FROM fichiers WHERE id = ?')->execute([$fileId]);
-    return $row['nom_original'];
+    $pdo->prepare(‘DELETE FROM fichiers WHERE id = ?’)->execute([$fileId]);
+    return $row[‘nom_original’];
 }
 
 // ---------- Notifications ----------

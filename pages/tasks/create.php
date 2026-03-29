@@ -53,60 +53,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $stmt = $pdo->prepare("INSERT INTO taches
-            (titre,description,statut,priorite,date_debut,date_echeance,createur_id,departement_id,base_id,categorie_id,pourcentage,tache_parente_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$titre,$description,$statut,$priorite,
-            $date_debut ?: null, $date_ech,
-            $currentUser['id'], $dept_id, $base_id, $cat_id, $pourcent, $parent_id]);
-        $taskId = (int)$pdo->lastInsertId();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("INSERT INTO taches
+                (titre,description,statut,priorite,date_debut,date_echeance,createur_id,departement_id,base_id,categorie_id,pourcentage,tache_parente_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$titre,$description,$statut,$priorite,
+                $date_debut ?: null, $date_ech,
+                $currentUser['id'], $dept_id, $base_id, $cat_id, $pourcent, $parent_id]);
+            $taskId = (int)$pdo->lastInsertId();
 
-        // Assignations — vérifier que l'utilisateur existe et est actif
-        if (!empty($assignes)) {
-            $ins = $pdo->prepare("INSERT IGNORE INTO taches_assignees (tache_id,user_id) VALUES (?,?)");
-            $validUser = $pdo->prepare("SELECT id FROM users WHERE id=? AND actif=1");
-            foreach ($assignes as $uid) {
-                $uid = (int)$uid;
-                if ($uid < 1) continue;
-                $validUser->execute([$uid]);
-                if (!$validUser->fetch()) continue;
-                $ins->execute([$taskId, $uid]);
-                // Notification
-                if ($uid !== $currentUser['id']) {
-                    createNotification($uid, 'task', 'Nouvelle tâche assignée',
-                        sanitize($currentUser['prenom']).' vous a assigné : '.sanitize($titre),
-                        APP_URL.'/pages/tasks/view.php?id='.$taskId);
+            // Assignations — vérifier que l'utilisateur existe et est actif
+            if (!empty($assignes)) {
+                $ins = $pdo->prepare("INSERT IGNORE INTO taches_assignees (tache_id,user_id) VALUES (?,?)");
+                $validUser = $pdo->prepare("SELECT id FROM users WHERE id=? AND actif=1");
+                foreach ($assignes as $uid) {
+                    $uid = (int)$uid;
+                    if ($uid < 1) continue;
+                    $validUser->execute([$uid]);
+                    if (!$validUser->fetch()) continue;
+                    $ins->execute([$taskId, $uid]);
+                    // Notification
+                    if ($uid !== $currentUser['id']) {
+                        createNotification($uid, 'task', 'Nouvelle tâche assignée',
+                            sanitize($currentUser['prenom']).' vous a assigné : '.sanitize($titre),
+                            APP_URL.'/pages/tasks/view.php?id='.$taskId);
+                    }
                 }
             }
+
+            logChange($taskId, $currentUser['id'], 'creation', '', $titre, 'creation');
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            error_log('TaskFlow: erreur création tâche: ' . $e->getMessage());
+            $errors[] = 'Erreur lors de la création de la tâche.';
         }
 
-        // Fichiers
-        $attachFlash = null;
-        $batch       = collectUploadedFiles('fichiers');
-        if (!empty($batch)) {
-            $fStmt = $pdo->prepare("INSERT INTO fichiers (tache_id,nom_original,chemin,taille,mime,uploaded_by) VALUES (?,?,?,?,?,?)");
-            $okFiles = 0;
-            foreach ($batch as $fdata) {
-                $uploaded = handleFileUpload($fdata, $taskId);
-                if ($uploaded) {
-                    $fStmt->execute([$taskId, $uploaded['nom_original'], $uploaded['chemin'], $uploaded['taille'], $uploaded['mime'], $currentUser['id']]);
-                    $okFiles++;
+        if (empty($errors)) {
+            // Fichiers (après commit pour ne pas bloquer la transaction en cas d'échec upload)
+            $attachFlash = null;
+            $batch       = collectUploadedFiles('fichiers');
+            if (!empty($batch)) {
+                $fStmt = $pdo->prepare("INSERT INTO fichiers (tache_id,nom_original,chemin,taille,mime,uploaded_by) VALUES (?,?,?,?,?,?)");
+                $okFiles = 0;
+                foreach ($batch as $fdata) {
+                    $uploaded = handleFileUpload($fdata, $taskId);
+                    if ($uploaded) {
+                        $fStmt->execute([$taskId, $uploaded['nom_original'], $uploaded['chemin'], $uploaded['taille'], $uploaded['mime'], $currentUser['id']]);
+                        $okFiles++;
+                    }
+                }
+                if ($okFiles === 0) {
+                    $attachFlash = ['warning', 'Tâche créée, mais aucune pièce jointe enregistrée (format, taille max 10 Mo, ou dossier uploads/ inaccessible en écriture).'];
+                } elseif ($okFiles < count($batch)) {
+                    $attachFlash = ['warning', 'Tâche créée : ' . $okFiles . ' fichier(s) sur ' . count($batch) . ' enregistré(s).'];
                 }
             }
-            if ($okFiles === 0) {
-                $attachFlash = ['warning', 'Tâche créée, mais aucune pièce jointe enregistrée (format, taille max 10 Mo, ou dossier uploads/ inaccessible en écriture).'];
-            } elseif ($okFiles < count($batch)) {
-                $attachFlash = ['warning', 'Tâche créée : ' . $okFiles . ' fichier(s) sur ' . count($batch) . ' enregistré(s).'];
+            if ($attachFlash !== null) {
+                flashMessage($attachFlash[0], $attachFlash[1]);
+            } else {
+                flashMessage('success', 'Tâche créée avec succès.');
             }
+            redirect('/pages/tasks/view.php?id='.$taskId);
         }
-
-        logChange($taskId, $currentUser['id'], 'creation', '', $titre, 'creation');
-        if ($attachFlash !== null) {
-            flashMessage($attachFlash[0], $attachFlash[1]);
-        } else {
-            flashMessage('success', 'Tâche créée avec succès.');
-        }
-        redirect('/pages/tasks/view.php?id='.$taskId);
     }
 }
 

@@ -95,11 +95,21 @@ function login(string $email, string $password): bool {
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, $user['password'])) return false;
 
+    // Regenerate session ID to prevent session fixation attacks
+    session_regenerate_id(true);
+
     $_SESSION['user_id']       = $user['id'];
     $_SESSION['last_activity'] = time();
+    // Regenerate CSRF token for the new session
+    $_SESSION['csrf_token']    = bin2hex(random_bytes(32));
     // Mise à jour last_login
     $pdo->prepare("UPDATE users SET last_login=NOW() WHERE id=?")->execute([$user['id']]);
     return true;
+}
+
+/** Escape LIKE wildcards in user search input. */
+function escapeLike(string $value): string {
+    return str_replace(['%', '_'], ['\\%', '\\_'], $value);
 }
 
 // ---------- Déconnexion ----------

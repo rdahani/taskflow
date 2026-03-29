@@ -280,5 +280,5 @@ if (defined('APP_URL')) {
   <main class="app-content">
 
 <?php // toast container & mobile overlay ?>
-<div id="toast-container"></div>
+<div id="toast-container" role="status" aria-live="polite"></div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="Sidebar.closeMobile()"></div>

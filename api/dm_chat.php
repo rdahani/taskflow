@@ -99,7 +99,7 @@ function dmTypingPing(int $threadId, int $userId): void {
  */
 function dmFormatMessages(array $rows): array {
     foreach ($rows as &$r) {
-        $r['body_html']     = nl2br(sanitize($r['body']));
+        $r['body_html']     = sanitize($r['body']);
         $r['created_label'] = formatDateTime($r['created_at']);
     }
     unset($r);
@@ -245,16 +245,17 @@ if ($method === 'POST') {
     }
 
     if ($threadId < 1 && $peerId > 0) {
-        try {
-            $threadId = dmEnsureThread($pdo, $me, $peerId);
-        } catch (InvalidArgumentException $e) {
-            echo json_encode(['success' => false, 'error' => 'Destinataire invalide']);
-            exit;
-        }
+        // Validate peer exists and is active BEFORE creating thread
         $chk = $pdo->prepare('SELECT 1 FROM users WHERE id = ? AND actif = 1');
         $chk->execute([$peerId]);
         if (!$chk->fetchColumn()) {
             echo json_encode(['success' => false, 'error' => 'Utilisateur introuvable']);
+            exit;
+        }
+        try {
+            $threadId = dmEnsureThread($pdo, $me, $peerId);
+        } catch (InvalidArgumentException $e) {
+            echo json_encode(['success' => false, 'error' => 'Destinataire invalide']);
             exit;
         }
     }
@@ -301,7 +302,7 @@ if ($method === 'POST') {
             'thread_id'     => (int) ($row['thread_id'] ?? $threadId),
             'sender_id'     => (int) ($row['sender_id'] ?? $me),
             'body'          => (string) ($row['body'] ?? $text),
-            'body_html'     => nl2br(sanitize((string) ($row['body'] ?? $text))),
+            'body_html'     => sanitize((string) ($row['body'] ?? $text)),
             'created_at'    => (string) ($row['created_at'] ?? ''),
             'created_label' => formatDateTime((string) ($row['created_at'] ?? date('Y-m-d H:i:s'))),
             'prenom'        => (string) ($row['prenom'] ?? $u['prenom']),

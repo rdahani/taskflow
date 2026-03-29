@@ -101,7 +101,7 @@ function taskChatTypingPing(int $taskId, int $userId): void {
  */
 function taskChatFormatRows(array $rows): array {
     foreach ($rows as &$r) {
-        $r['message_html']  = nl2br(sanitize($r['message']));
+        $r['message_html']  = sanitize($r['message']);
         $r['created_label'] = formatDateTime($r['created_at']);
     }
     unset($r);
@@ -280,7 +280,7 @@ if ($method === 'POST') {
             'id'            => (int) ($row['id'] ?? $newId),
             'user_id'       => (int) ($row['user_id'] ?? $uid),
             'message'       => (string) ($row['message'] ?? $text),
-            'message_html'  => nl2br(sanitize((string) ($row['message'] ?? $text))),
+            'message_html'  => sanitize((string) ($row['message'] ?? $text)),
             'created_at'    => (string) ($row['created_at'] ?? ''),
             'created_label' => formatDateTime((string) ($row['created_at'] ?? date('Y-m-d H:i:s'))),
             'prenom'        => (string) ($row['prenom'] ?? $u['prenom']),

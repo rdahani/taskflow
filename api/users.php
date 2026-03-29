@@ -48,12 +48,15 @@ switch ($action) {
         break;
 
     case 'list_assignable':
-        // Liste des utilisateurs assignables (pour AJAX)
+        // Liste des utilisateurs assignables (pour AJAX) — restreint aux superviseurs+
+        if (!isSuperviseur()) {
+            echo json_encode(['success'=>false,'error'=>'Accès refusé']); break;
+        }
         $q    = trim($_GET['q'] ?? '');
         $dept = (int)($_GET['dept'] ?? 0);
         $where = ['actif=1'];
         $params = [];
-        if ($q)    { $where[] = '(nom LIKE ? OR prenom LIKE ?)'; $params[]="%$q%"; $params[]="%$q%"; }
+        if ($q)    { $ql = '%' . escapeLike($q) . '%'; $where[] = '(nom LIKE ? OR prenom LIKE ?)'; $params[]=$ql; $params[]=$ql; }
         if ($dept) { $where[] = 'departement_id=?'; $params[]=$dept; }
         $stmt = $pdo->prepare("SELECT id,nom,prenom,role,departement_id FROM users WHERE ".implode(' AND ',$where)." ORDER BY nom LIMIT 20");
         $stmt->execute($params);

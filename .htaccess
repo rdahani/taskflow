@@ -8,8 +8,8 @@
 # Pas de listing des répertoires
 Options -Indexes
 
-# Fichiers sensibles à la racine et sous-dossiers (le dossier config/ est aussi protégé séparément)
-<FilesMatch "\.(sql|md|example|log)$">
+# Fichiers sensibles à la racine et sous-dossiers
+<FilesMatch "\.(sql|md|example|log|env|bak|swp|local\.php|ini|conf|yml|yaml|json|lock|xml)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -18,3 +18,13 @@ Options -Indexes
     Deny from all
   </IfModule>
 </FilesMatch>
+
+# Bloquer l'accès aux fichiers cachés (.git, .env, etc.)
+<IfModule mod_rewrite.c>
+  RewriteRule (^|/)\.(?!well-known) - [F,L]
+</IfModule>
+
+# Empêcher l'exécution de PHP dans le dossier uploads
+<IfModule mod_rewrite.c>
+  RewriteRule ^uploads/.*\.(php|phtml|phar|cgi|pl|py|sh)$ - [F,L]
+</IfModule>

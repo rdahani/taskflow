@@ -108,7 +108,7 @@ const Toast = {
         <div class="toast-title">${title}</div>
         ${message ? `<div class="toast-msg">${message}</div>` : ''}
       </div>
-      <button class="toast-close" onclick="this.closest('.toast').remove()">
+      <button class="toast-close" aria-label="Fermer" onclick="this.closest('.toast').remove()">
         <i class="fa-solid fa-xmark"></i>
       </button>
     `;
@@ -184,9 +184,27 @@ const Confirm = {
         resolve(result);
       };
 
-      overlay.querySelector('#confirmOk').onclick = () => close(true);
-      overlay.querySelector('#confirmCancel').onclick = () => close(false);
+      const okBtn = overlay.querySelector('#confirmOk');
+      const cancelBtn = overlay.querySelector('#confirmCancel');
+      okBtn.onclick = () => close(true);
+      cancelBtn.onclick = () => close(false);
       overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });
+
+      // Escape key closes modal
+      const onKey = (e) => { if (e.key === 'Escape') close(false); };
+      document.addEventListener('keydown', onKey);
+      const origClose = close;
+      // Cleanup listener on close
+      const wrappedClose = (result) => {
+        document.removeEventListener('keydown', onKey);
+        origClose(result);
+      };
+      okBtn.onclick = () => wrappedClose(true);
+      cancelBtn.onclick = () => wrappedClose(false);
+      overlay.addEventListener('click', e => { if (e.target === overlay) wrappedClose(false); });
+
+      // Focus the cancel button by default for safety
+      cancelBtn.focus();
     });
   }
 };
@@ -216,6 +234,7 @@ async function loadNotifs() {
   if (!list) return;
   try {
     const res = await tfFetch(tfUrl('/api/notifications.php?action=list'));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data.items?.length) {
       list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px"><i class="fa-regular fa-bell-slash" style="font-size:20px;opacity:0.4;display:block;margin-bottom:8px"></i>Aucune notification</div>';
@@ -236,7 +255,10 @@ async function loadNotifs() {
 async function readNotif(id, lien) {
   await tfFetch(tfUrl(`/api/notifications.php?action=read&id=${id}`), { method: 'POST' });
   updateNotifBadge();
-  if (lien) window.location = lien;
+  // Only allow internal redirects (relative paths or same-origin)
+  if (lien && (lien.startsWith('/') || lien.startsWith(window.location.origin))) {
+    window.location = lien;
+  }
 }
 
 async function markAllRead() {
@@ -248,6 +270,7 @@ async function markAllRead() {
 async function updateNotifBadge() {
   try {
     const res = await tfFetch(tfUrl('/api/notifications.php?action=count'));
+    if (!res.ok) return;
     const data = await res.json();
     const badge = document.querySelector('.notif-badge');
     if (data.count > 0) {
@@ -255,7 +278,9 @@ async function updateNotifBadge() {
     } else {
       badge?.remove();
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('TaskFlow: notification badge update failed', e);
+  }
 }
 
 // Close notif panel on outside click
@@ -301,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function _doSearch(q, resultsEl) {
   try {
     const res = await tfFetch(tfUrl(`/api/tasks.php?action=search&q=${encodeURIComponent(q)}`));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!data.results?.length) {
       resultsEl.innerHTML = '<div class="search-result-item" style="color:var(--text3);justify-content:center">Aucun résultat</div>';
@@ -314,7 +340,9 @@ async function _doSearch(q, resultsEl) {
       `).join('');
     }
     resultsEl.classList.add('visible');
-  } catch (e) {}
+  } catch (e) {
+    console.warn('TaskFlow: search failed', e);
+  }
 }
 
 /* ============================================================
@@ -345,9 +373,10 @@ async function updateTaskStatus(taskId, status) {
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify({ action: 'update_status', id: taskId, statut: status })
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.success) Toast.success('Statut mis à jour');
-    else Toast.error('Erreur', data.message || 'Mise à jour échouée');
+    else Toast.error('Erreur', data.error || 'Mise à jour échouée');
   } catch (e) {
     Toast.error('Erreur réseau');
   }
@@ -454,6 +483,13 @@ document.addEventListener('click', e => {
     e.target.classList.remove('open');
   }
 });
+// Escape key closes any open modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const open = document.querySelector('.modal-overlay.open');
+    if (open) open.classList.remove('open');
+  }
+});
 
 /* ============================================================
    UTILITAIRES
@@ -480,7 +516,7 @@ function appendTaskChatRow(container, m, currentUserId) {
   const div = document.createElement('div');
   div.className = 'chat-msg' + (isMe ? ' chat-msg--me' : '');
   div.dataset.id = String(m.id);
-  const bodyHtml = m.message_html || escHtml(m.message || '').replace(/\n/g, '<br>');
+  const bodyHtml = m.message_html || escHtml(m.message || '');
   div.innerHTML = `
     <div class="chat-msg-avatar">
       <div class="user-avatar" style="width:32px;height:32px;font-size:11px;background:${chatUserBg(m.user_id)}">${escHtml(initials.toUpperCase())}</div>
@@ -490,7 +526,7 @@ function appendTaskChatRow(container, m, currentUserId) {
         <strong>${escHtml((m.prenom || '') + ' ' + (m.nom || ''))}</strong>
         <span class="chat-msg-time">${escHtml(m.created_label || '')}</span>
       </div>
-      <div class="chat-msg-text">${bodyHtml}</div>
+      <div class="chat-msg-text" style="white-space:pre-line">${bodyHtml}</div>
     </div>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -589,6 +625,7 @@ function initTaskChat() {
     const url = tfUrl(`/api/task_chat.php?task_id=${taskId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`);
     pollAbort = new AbortController();
     const res = await fetch(url, { signal: pollAbort.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
 
@@ -691,7 +728,7 @@ function appendDmChatRow(container, m, currentUserId) {
   const div = document.createElement('div');
   div.className = 'chat-msg' + (isMe ? ' chat-msg--me' : '');
   div.dataset.id = String(m.id);
-  const bodyHtml = m.body_html || escHtml(m.body || '').replace(/\n/g, '<br>');
+  const bodyHtml = m.body_html || escHtml(m.body || '');
   div.innerHTML = `
     <div class="chat-msg-avatar">
       <div class="user-avatar" style="width:32px;height:32px;font-size:11px;background:${chatUserBg(m.sender_id)}">${escHtml(initials.toUpperCase())}</div>
@@ -701,7 +738,7 @@ function appendDmChatRow(container, m, currentUserId) {
         <strong>${escHtml((m.prenom || '') + ' ' + (m.nom || ''))}</strong>
         <span class="chat-msg-time">${escHtml(m.created_label || '')}</span>
       </div>
-      <div class="chat-msg-text">${bodyHtml}</div>
+      <div class="chat-msg-text" style="white-space:pre-line">${bodyHtml}</div>
     </div>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -805,6 +842,7 @@ function initDmChat() {
     const url = tfUrl(`/api/dm_chat.php?action=messages&thread_id=${threadId}&after_id=${lastId}&long_poll=${longPoll ? 1 : 0}&timeout=${timeout}`);
     pollAbort = new AbortController();
     const res = await fetch(url, { signal: pollAbort.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
 
